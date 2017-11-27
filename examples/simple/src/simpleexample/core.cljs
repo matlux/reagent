@@ -34,7 +34,7 @@
          #(println %))
 
   (take! c #(println %))
-(GET "http://localhost:8080/bar")
+  (GET "http://localhost:8080/bar")
   (foo)
   @points
 
@@ -46,19 +46,34 @@
 
   (->>
     (reduce (fn [[acc prevpts] pt] (vector (inc acc) (conj prevpts (conj pt acc)))) [0 []] '([1 2] [2 3] [3 4]))
-    second)
+    second;
+    rescale
+    )
 
-  )
+  (->> (map (fn [p1 p2] [p1 p2]) '(1 2 3 4 5) (drop 1 '(1 2 3 4 5)))
+       (reduce (fn [[acc prevpts] pt] (vector (inc acc) (conj prevpts (conj pt acc)))) [0 []] )
+       second
+       (rescale 5)
+       ;plot
+       )
+  (graph '(1 2 3 4))
+  (apply max '(1 2 3 4))
+
+    )
 
 (enable-console-print!)
 (def points
-  (r/atom
-    [10
-     20
-     20
-     25
-     30 30 30 30 30 ]))
+    (r/atom
+      [10
+       ]))
 
+(defn rescale [max-y coll]
+  (let [width 800
+        height 600
+        hh (/ height 2)
+        ystep (/ height max-y)
+        step (/ width (count coll) )]
+    [step (reduce (fn [prevpts [p1 p2 idx]] (conj prevpts [(- height (* ystep p1)) (- height (* ystep p2)) (* step idx)])) [] coll)]))
 
 (defn foo2 []
   (take! (go (let [response (<! (http/get "https://api.github.com/users"
@@ -94,9 +109,10 @@
 
 (def time-updater (js/setInterval
                         #(do
-                           (reset! test-field (get-point))
+                           ;(reset! test-field (get-point))
                            (add-point)
-                           (reset! timer (js/Date.))) 1000))
+                           ;(reset! timer (js/Date.))
+                           ) 2000))
 
 (defn greeting [message]
   [:h1 message])
@@ -164,11 +180,20 @@
       (swap! slider assoc p (g/point new-x 50))
       (reset! points (nth history (int (* (dec (count history)) position)))))))
 
+(defn plot [[step coll]]
+  (mapcat (fn [[p1 p2 idx]] [(c/segment (g/point idx p1) (g/point (+ idx step) p2) idx)
+                             ;(c/point {:on-drag (move-point svg-root :c)} (g/point idx p1))
+                             (c/point {:on-drag nil} (g/point idx p1) idx)
+                             ]
+            ) coll))
+
 (defn graph [pts]
   (->> (map (fn [p1 p2] [p1 p2]) pts (drop 1 pts))
        (reduce (fn [[acc prevpts] pt] (vector (inc acc) (conj prevpts (conj pt acc)))) [0 []] )
        second
-       (map (fn [[p1 p2 idx]] (c/segment (g/point idx p1) (g/point (inc idx) p2) idx)) ))
+       (rescale 60)
+       plot
+       )
 
   )
 
@@ -186,8 +211,8 @@
      ;[c/rect {:on-drag (move-slider svg-root :handle)
      ;         :on-start stop-recording-history
      ;         :on-end start-recording-history} (:handle @slider)]
-     ;[c/point {:on-drag (move-point svg-root :c)} (g/point 50 (get pts 0))]
-     ;[c/point {:on-drag (move-point svg-root :p)} (g/point 100 (get pts 1))]
+     ;[c/circle  (g/point 500 400) 4]
+     ;(c/point {:on-drag nil} (g/point 100 400))
      ;[c/point {:on-drag (move-point svg-root :p1)} (g/point 150 (get pts 2))]
      ;[c/point {:on-drag (move-point svg-root :p2)} (get pts 3)]
      ;[c/point {:on-drag (move-point svg-root :p3)} (get pts 4)]
