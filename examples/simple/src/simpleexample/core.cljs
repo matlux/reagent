@@ -36,11 +36,22 @@
   (take! c #(println %))
 (GET "http://localhost:8080/bar")
   (foo)
+  @points
 
+  (map (fn [p1 p2] [p1 p2]) '(1 2 3 4) (drop 1 '(1 2 3 4)))
+
+  (conj [1 2 3] 4)
+  (js->clj (get-point))
   )
 
 (enable-console-print!)
-
+(def points
+  (r/atom
+    [(g/point 100 100)
+     (g/point 200 200)
+     (g/point 300 200)
+     (g/point 400 250)
+     (g/point 500 300)]))
 
 
 (defn foo2 []
@@ -58,7 +69,17 @@
          #(println %)))
 
 (defn foo []
-  (.getSeconds (js/Date.)))
+  (str (.getSeconds (js/Date.)) " " @points))
+
+(defn get-point []
+  (clj->js (.getSeconds (js/Date.))))
+
+
+(defn add-point []
+  (swap! points (fn [pts]
+                  (conj pts (g/point 600 (get-point))))))
+
+
 
 (defonce timer (r/atom (js/Date.)))
 
@@ -67,8 +88,9 @@
 
 (def time-updater (js/setInterval
                         #(do
-                           (reset! test-field (foo))
-                           (reset! timer (js/Date.))) 1000))
+                           (reset! test-field (get-point))
+                           ;(add-point)
+                           (reset! timer (js/Date.))) 5000))
 
 (defn greeting [message]
   [:h1 message])
@@ -95,13 +117,14 @@
 
 ;;-------------------------------
 
-(defonce points
+(def pointsold
          (r/atom
            {:p1 (g/point 100 100)
             :p2 (g/point 200 200)
-            :p3 (g/point 100 200)
+            :p3 (g/point 300 200)
             :c (g/point 250 250)
             :p (g/point 250 300)}))
+
 
 (defonce slider
          (r/atom
@@ -142,21 +165,31 @@
       (swap! slider assoc p (g/point new-x 50))
       (reset! points (nth history (int (* (dec (count history)) position)))))))
 
+(defn graph [pts]
+
+  (map (fn [[p1 p2]] (c/segment p1 p2)) (map (fn [p1 p2] [p1 p2]) pts (drop 1 pts)))
+  )
+
 (defn root [svg-root]
-  (let [{:keys [p1 p2 p3 p c]} @points]
+  (let [pts @points]
     [:g
-     [c/triangle p1 p2 p3]
-     [c/circle p c]
-     [c/segment p c]
+     ;[c/triangle p1 p2 p3]
+     ;[c/circle p c]
+     ;[c/segment (get pts 0) (get pts 1)]
+     ;[c/segment (get pts 1) (get pts 2)]
+     ;(c/segment (get pts 2) (get pts 3))
+     (graph pts)
+     ;(map (fn [[p1 p2]] (c/segment p1 p2)) (map (fn [p1 p2] [p1 p2]) pts (drop 1 pts)))
      [c/segment (g/point 100 50) (g/point 500 50)]
      [c/rect {:on-drag (move-slider svg-root :handle)
               :on-start stop-recording-history
               :on-end start-recording-history} (:handle @slider)]
-     [c/point {:on-drag (move-point svg-root :c)} c]
-     [c/point {:on-drag (move-point svg-root :p)} p]
-     [c/point {:on-drag (move-point svg-root :p1)} p1]
-     [c/point {:on-drag (move-point svg-root :p2)} p2]
-     [c/point {:on-drag (move-point svg-root :p3)} p3]]))
+     [c/point {:on-drag (move-point svg-root :c)} (get pts 0)]
+     [c/point {:on-drag (move-point svg-root :p)} (get pts 1)]
+     [c/point {:on-drag (move-point svg-root :p1)} (get pts 2)]
+     [c/point {:on-drag (move-point svg-root :p2)} (get pts 3)]
+     [c/point {:on-drag (move-point svg-root :p3)} (get pts 4)]
+     ]))
 
 (defn canvas [{:keys [width height]}]
   [:svg
