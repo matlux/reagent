@@ -41,17 +41,23 @@
   (map (fn [p1 p2] [p1 p2]) '(1 2 3 4) (drop 1 '(1 2 3 4)))
 
   (conj [1 2 3] 4)
-  (js->clj (get-point))
+  (type (js->clj (get-point)))
+  (type 4)
+
+  (->>
+    (reduce (fn [[acc prevpts] pt] (vector (inc acc) (conj prevpts (conj pt acc)))) [0 []] '([1 2] [2 3] [3 4]))
+    second)
+
   )
 
 (enable-console-print!)
 (def points
   (r/atom
-    [(g/point 100 100)
-     (g/point 200 200)
-     (g/point 300 200)
-     (g/point 400 250)
-     (g/point 500 300)]))
+    [10
+     20
+     20
+     25
+     30 30 30 30 30 ]))
 
 
 (defn foo2 []
@@ -72,12 +78,12 @@
   (str (.getSeconds (js/Date.)) " " @points))
 
 (defn get-point []
-  (clj->js (.getSeconds (js/Date.))))
+  (js->clj (.getSeconds (js/Date.))))
 
 
 (defn add-point []
   (swap! points (fn [pts]
-                  (conj pts (g/point 600 (get-point))))))
+                  (conj pts (get-point)))))
 
 
 
@@ -89,8 +95,8 @@
 (def time-updater (js/setInterval
                         #(do
                            (reset! test-field (get-point))
-                           ;(add-point)
-                           (reset! timer (js/Date.))) 5000))
+                           (add-point)
+                           (reset! timer (js/Date.))) 1000))
 
 (defn greeting [message]
   [:h1 message])
@@ -117,13 +123,6 @@
 
 ;;-------------------------------
 
-(def pointsold
-         (r/atom
-           {:p1 (g/point 100 100)
-            :p2 (g/point 200 200)
-            :p3 (g/point 300 200)
-            :c (g/point 250 250)
-            :p (g/point 250 300)}))
 
 
 (defonce slider
@@ -166,8 +165,11 @@
       (reset! points (nth history (int (* (dec (count history)) position)))))))
 
 (defn graph [pts]
+  (->> (map (fn [p1 p2] [p1 p2]) pts (drop 1 pts))
+       (reduce (fn [[acc prevpts] pt] (vector (inc acc) (conj prevpts (conj pt acc)))) [0 []] )
+       second
+       (map (fn [[p1 p2 idx]] (c/segment (g/point idx p1) (g/point (inc idx) p2))) ))
 
-  (map (fn [[p1 p2]] (c/segment p1 p2)) (map (fn [p1 p2] [p1 p2]) pts (drop 1 pts)))
   )
 
 (defn root [svg-root]
@@ -184,11 +186,11 @@
      [c/rect {:on-drag (move-slider svg-root :handle)
               :on-start stop-recording-history
               :on-end start-recording-history} (:handle @slider)]
-     [c/point {:on-drag (move-point svg-root :c)} (get pts 0)]
-     [c/point {:on-drag (move-point svg-root :p)} (get pts 1)]
-     [c/point {:on-drag (move-point svg-root :p1)} (get pts 2)]
-     [c/point {:on-drag (move-point svg-root :p2)} (get pts 3)]
-     [c/point {:on-drag (move-point svg-root :p3)} (get pts 4)]
+     [c/point {:on-drag (move-point svg-root :c)} (g/point 50 (get pts 0))]
+     [c/point {:on-drag (move-point svg-root :p)} (g/point 100 (get pts 1))]
+     [c/point {:on-drag (move-point svg-root :p1)} (g/point 150 (get pts 2))]
+     ;[c/point {:on-drag (move-point svg-root :p2)} (get pts 3)]
+     ;[c/point {:on-drag (move-point svg-root :p3)} (get pts 4)]
      ]))
 
 (defn canvas [{:keys [width height]}]
