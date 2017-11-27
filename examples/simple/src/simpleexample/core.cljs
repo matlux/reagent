@@ -58,6 +58,7 @@
        )
   (graph '(1 2 3 4))
   (apply max '(1 2 3 4))
+  (foo4)
 
     )
 
@@ -75,6 +76,39 @@
         step (/ width (count coll) )]
     [step (reduce (fn [prevpts [p1 p2 idx]] (conj prevpts [(- height (* ystep p1)) (- height (* ystep p2)) (* step idx)])) [] coll)]))
 
+;(defn handler [response]
+;  (.log js/console (str response)))
+;
+;(defn error-handler [{:keys [status status-text]}]
+;  (.log js/console (str "something bad happened: " status " " status-text)))
+
+(defmacro time-exec
+  "Evaluates expr and prints the time it took.  Returns the value of
+ expr."
+  {:added "1.0"}
+  [expr]
+  `(let [start# (. System (nanoTime))
+         ret# ~expr]
+     (/ (double (- (. System (nanoTime)) start#)) 1000000.0)) )
+
+(defn time-remote-call [endpoint f]
+  (go (let [start (js->clj (.getTime (js/Date.)))
+            response (<! (http/get endpoint {:with-credentials? false}))
+             t (double (- (js->clj (.getTime (js/Date.))) start))
+            ]
+        ;;enjoy your data
+        (f                                                  ;t
+          ;(:body response)
+          t
+
+          ;(:body response)
+          ))))
+
+(defn make-remote-call [endpoint f]
+  (go (let [response (<! (http/get endpoint {:with-credentials? false}))]
+        ;;enjoy your data
+        (f (:body response)))))
+
 (defn foo2 []
   (take! (go (let [response (<! (http/get "https://api.github.com/users"
                                           {:with-credentials? false
@@ -83,11 +117,11 @@
                (prn (map :login (:body response)))))
          #(println %)))
 (defn foo3 []
-  (take! (go (let [response (<! (http/get "http://localhost:8080/bar"
-                                          {:with-credentials? false}))]
-               (prn (:status response))
-               (prn (map :login (:body response)))))
-         #(println %)))
+  (go (let [response (<! (http/get "http://localhost:8080/bar"
+                                   {:with-credentials? false}))]
+        (prn (:status response))
+        (prn (map :login (:body response)))))
+  )
 
 (defn foo []
   (str (.getSeconds (js/Date.)) " " @points))
@@ -97,8 +131,9 @@
 
 
 (defn add-point []
+  (foo4)
   (swap! points (fn [pts]
-                  (conj pts (get-point)))))
+                  (conj pts @test-field))))
 
 
 
@@ -107,12 +142,18 @@
 (def time-color (r/atom "#920"))
 (def test-field (r/atom "data..."))
 
+(defn foo4 []
+  (time-remote-call "http://localhost:8080/bar" #(do
+                                                  (println %)
+                                                  (reset! test-field  %))))
+
 (def time-updater (js/setInterval
                         #(do
-                           ;(reset! test-field (get-point))
+                           ;(reset! test-field (foo4))
+                           ;
                            (add-point)
                            ;(reset! timer (js/Date.))
-                           ) 2000))
+                           ) 1000))
 
 (defn greeting [message]
   [:h1 message])
