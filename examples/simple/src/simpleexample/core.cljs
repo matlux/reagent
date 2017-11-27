@@ -168,7 +168,7 @@
   (->> (map (fn [p1 p2] [p1 p2]) pts (drop 1 pts))
        (reduce (fn [[acc prevpts] pt] (vector (inc acc) (conj prevpts (conj pt acc)))) [0 []] )
        second
-       (map (fn [[p1 p2 idx]] (c/segment (g/point idx p1) (g/point (inc idx) p2))) ))
+       (map (fn [[p1 p2 idx]] (c/segment (g/point idx p1) (g/point (inc idx) p2) idx)) ))
 
   )
 
@@ -182,13 +182,13 @@
      ;(c/segment (get pts 2) (get pts 3))
      (graph pts)
      ;(map (fn [[p1 p2]] (c/segment p1 p2)) (map (fn [p1 p2] [p1 p2]) pts (drop 1 pts)))
-     [c/segment (g/point 100 50) (g/point 500 50)]
-     [c/rect {:on-drag (move-slider svg-root :handle)
-              :on-start stop-recording-history
-              :on-end start-recording-history} (:handle @slider)]
-     [c/point {:on-drag (move-point svg-root :c)} (g/point 50 (get pts 0))]
-     [c/point {:on-drag (move-point svg-root :p)} (g/point 100 (get pts 1))]
-     [c/point {:on-drag (move-point svg-root :p1)} (g/point 150 (get pts 2))]
+     ;[c/segment (g/point 100 50) (g/point 500 50)]
+     ;[c/rect {:on-drag (move-slider svg-root :handle)
+     ;         :on-start stop-recording-history
+     ;         :on-end start-recording-history} (:handle @slider)]
+     ;[c/point {:on-drag (move-point svg-root :c)} (g/point 50 (get pts 0))]
+     ;[c/point {:on-drag (move-point svg-root :p)} (g/point 100 (get pts 1))]
+     ;[c/point {:on-drag (move-point svg-root :p1)} (g/point 150 (get pts 2))]
      ;[c/point {:on-drag (move-point svg-root :p2)} (get pts 3)]
      ;[c/point {:on-drag (move-point svg-root :p3)} (get pts 4)]
      ]))

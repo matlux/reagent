@@ -52,8 +52,8 @@
            :cx (x p)
            :cy (y p)})])
 
-(defn segment [from to]
-  [:line 
+(defn segment [from to idx]
+  ^{:key idx} [:line
    (merge segment-defaults
           {:x1 (x from) :y1 (y from)
            :x2 (x to) :y2 (y to)})])
