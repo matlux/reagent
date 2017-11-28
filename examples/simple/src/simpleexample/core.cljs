@@ -57,13 +57,13 @@
        ;plot
        )
   (graph '(1 2 3 4))
-  (apply max '(1 2 3 4))
+  (into []  (take-last 20 [1 2 3 4]))
   (foo4)
 
     )
 
 (enable-console-print!)
-(def points
+(defonce points
     (r/atom
       [10
        ]))
@@ -130,10 +130,6 @@
   (js->clj (.getSeconds (js/Date.))))
 
 
-(defn add-point []
-  (foo4)
-  (swap! points (fn [pts]
-                  (conj pts @test-field))))
 
 
 
@@ -141,19 +137,35 @@
 
 (def time-color (r/atom "#920"))
 (def test-field (r/atom "data..."))
+(def tx-time (atom 0))
 
-(defn foo4 []
-  (time-remote-call "http://localhost:8080/bar" #(do
+(defn transaction! []
+  (time-remote-call "http://localhost:8080/compute" #(do
                                                   (println %)
-                                                  (reset! test-field  %))))
+                                                  (reset! tx-time  %))))
 
-(def time-updater (js/setInterval
+(defn add-point []
+
+  (swap! points (fn [pts]
+                  (let [new-pts (conj pts @tx-time)
+                        ;c (count new-pts)
+                        ]
+
+                    (into [] (take-last 64 new-pts))))))
+
+
+(defonce time-updater (js/setInterval
                         #(do
-                           ;(reset! test-field (foo4))
+                           (reset! test-field @tx-time)
                            ;
                            (add-point)
                            ;(reset! timer (js/Date.))
                            ) 1000))
+(defonce time-updater2 (js/setInterval
+                    #(do
+                       (transaction!)
+                       ) 200))
+
 
 (defn greeting [message]
   [:h1 message])
@@ -232,7 +244,7 @@
   (->> (map (fn [p1 p2] [p1 p2]) pts (drop 1 pts))
        (reduce (fn [[acc prevpts] pt] (vector (inc acc) (conj prevpts (conj pt acc)))) [0 []] )
        second
-       (rescale 60)
+       (rescale (apply max pts))
        plot
        )
 
