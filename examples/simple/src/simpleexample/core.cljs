@@ -63,18 +63,30 @@
     )
 
 (enable-console-print!)
+
+(defonce timer (r/atom (js/Date.)))
+
+(def time-color (r/atom "#920"))
+(def test-field (r/atom "data..."))
+(def tx-time (atom 0))
+(def thread-count (atom 0))
+
 (defonce points
     (r/atom
-      [10
+      [{:status 503 :y 10}
        ]))
 
 (defn rescale [max-y coll]
   (let [width 800
         height 600
-        hh (/ height 2)
         ystep (/ height max-y)
         step (/ width (count coll) )]
-    [step (reduce (fn [prevpts [p1 p2 idx]] (conj prevpts [(- height (* ystep p1)) (- height (* ystep p2)) (* step idx)])) [] coll)]))
+    [step (reduce (fn [prevpts [{s1 :status p1 :y} {s2 :status p2 :y} idx]]
+                    (conj prevpts
+                          [{:status s1 :y (- height (* ystep p1))}
+                           {:status s2 :y (- height (* ystep p2))}
+                           (* step idx)]))
+                  [] coll)]))
 
 ;(defn handler [response]
 ;  (.log js/console (str response)))
@@ -98,7 +110,8 @@
             ]
         ;;enjoy your data
         (f                                                  ;t
-          ;(:body response)
+          (:body response)
+          (:status response)
           t
 
           ;(:body response)
@@ -109,40 +122,17 @@
         ;;enjoy your data
         (f (:body response)))))
 
-(defn foo2 []
-  (take! (go (let [response (<! (http/get "https://api.github.com/users"
-                                          {:with-credentials? false
-                                           :query-params      {"since" 135}}))]
-               (prn (:status response))
-               (prn (map :login (:body response)))))
-         #(println %)))
-(defn foo3 []
-  (go (let [response (<! (http/get "http://localhost:8080/bar"
-                                   {:with-credentials? false}))]
-        (prn (:status response))
-        (prn (map :login (:body response)))))
-  )
-
-(defn foo []
-  (str (.getSeconds (js/Date.)) " " @points))
-
-(defn get-point []
-  (js->clj (.getSeconds (js/Date.))))
 
 
 
 
 
-(defonce timer (r/atom (js/Date.)))
-
-(def time-color (r/atom "#920"))
-(def test-field (r/atom "data..."))
-(def tx-time (atom 0))
 
 (defn transaction! []
   (time-remote-call "http://localhost:8080/compute" #(do
                                                   (println %)
-                                                  (reset! tx-time  %))))
+                                                  ;(reset! test-field %2)
+                                                  (reset! tx-time  {:status %2 :response %1 :y %3}))))
 
 (defn add-point []
 
@@ -154,16 +144,14 @@
                     (into [] (take-last 64 new-pts))))))
 
 
-(defonce time-updater (js/setInterval
-                        #(do
-                           (reset! test-field @tx-time)
-                           ;
-                           (add-point)
-                           ;(reset! timer (js/Date.))
-                           ) 1000))
+
 (defonce time-updater2 (js/setInterval
                     #(do
-                       (transaction!)
+                       (if (< @thread-count 1)
+                         (do
+                           (transaction!)
+                           (reset! test-field @tx-time)
+                           ))
                        ) 200))
 
 
@@ -234,9 +222,9 @@
       (reset! points (nth history (int (* (dec (count history)) position)))))))
 
 (defn plot [[step coll]]
-  (mapcat (fn [[p1 p2 idx]] [(c/segment (g/point idx p1) (g/point (+ idx step) p2) idx)
+  (mapcat (fn [[{s1 :status p1 :y} {s2 :status p2 :y} idx]] [(c/segment (g/point idx p1) (g/point (+ idx step) p2) idx)
                              ;(c/point {:on-drag (move-point svg-root :c)} (g/point idx p1))
-                             (c/point {:on-drag nil} (g/point idx p1) idx)
+                             (c/point {:point-colour (if (= s1 200) "blue" "red")} (g/point idx p1) idx)
                              ]
             ) coll))
 
@@ -244,7 +232,7 @@
   (->> (map (fn [p1 p2] [p1 p2]) pts (drop 1 pts))
        (reduce (fn [[acc prevpts] pt] (vector (inc acc) (conj prevpts (conj pt acc)))) [0 []] )
        second
-       (rescale (apply max pts))
+       (rescale (apply max (map :y pts)))
        plot
        )
 

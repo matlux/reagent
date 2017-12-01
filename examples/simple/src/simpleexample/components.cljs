@@ -45,10 +45,10 @@
      (events/listen js/window EventType.MOUSEMOVE drag-move)
      (events/listen js/window EventType.MOUSEUP drag-end))))
 
-(defn point [{:keys [on-drag]} p idx]
+(defn point [{:keys [point-colour]} p idx]
   ^{:key (* idx 3)} [:circle
    (merge point-defaults
-          {:on-mouse-down #(dragging on-drag)
+          {:fill point-colour
            :cx (x p)
            :cy (y p)})])
 
