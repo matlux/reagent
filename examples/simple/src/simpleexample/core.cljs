@@ -105,7 +105,9 @@
 
 (defn time-remote-call [endpoint f]
   (go (let [start (js->clj (.getTime (js/Date.)))
+            _ (swap! thread-count inc)
             response (<! (http/get endpoint {:with-credentials? false}))
+            _ (swap! thread-count dec)
              t (double (- (js->clj (.getTime (js/Date.))) start))
             ]
         ;;enjoy your data
@@ -130,7 +132,7 @@
 
 (defn transaction! []
   (time-remote-call "http://localhost:8080/compute" #(do
-                                                  (println %)
+                                                       ;(println %)
                                                   ;(reset! test-field %2)
                                                   (reset! tx-time  {:status %2 :response %1 :y %3}))))
 
@@ -140,7 +142,7 @@
                   (let [new-pts (conj pts @tx-time)
                         ;c (count new-pts)
                         ]
-
+                    (println "time add-point")
                     (into [] (take-last 64 new-pts))))))
 
 
@@ -149,10 +151,12 @@
                     #(do
                        (if (< @thread-count 1)
                          (do
+
                            (transaction!)
                            (reset! test-field @tx-time)
+                           (add-point)
                            ))
-                       ) 200))
+                       ) 400))
 
 
 (defn greeting [message]
@@ -176,6 +180,7 @@
   [:div.color-input
    "test="
    @test-field
+   [:p "req simult #=" @thread-count]
    ])
 
 ;;-------------------------------
