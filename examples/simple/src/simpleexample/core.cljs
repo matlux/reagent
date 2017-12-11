@@ -66,7 +66,7 @@
 
 (defonce timer (r/atom (js/Date.)))
 
-(def time-color (r/atom "#920"))
+(def url-target (r/atom "http://localhost:8080/compute"))
 (def test-field (r/atom "data..."))
 (def tx-time (atom 0))
 (def thread-count (atom 0))
@@ -131,7 +131,7 @@
 
 
 (defn transaction! []
-  (time-remote-call "http://localhost:8080/compute" #(do
+  (time-remote-call @url-target #(do
                                                        ;(println %)
                                                   ;(reset! test-field %2)
                                                   (reset! tx-time  {:status %2 :response %1 :y %3}))))
@@ -165,16 +165,16 @@
 (defn clock []
   (let [time-str (-> @timer .toTimeString (clojure.string/split " ") first)]
     [:div.example-clock
-     {:style {:color @time-color}}
+     {:style {:color @url-target}}
      time-str]))
 
 
-(defn color-input []
+(defn url-input []
   [:div.color-input
-   "Time color: "
+   "Url target: "
    [:input {:type "text"
-            :value @time-color
-            :on-change #(reset! time-color (-> % .-target .-value))}]])
+            :value @url-target
+            :on-change #(reset! url-target (-> % .-target .-value))}]])
 
 (defn test-component []
   [:div.color-input
@@ -279,8 +279,7 @@
 (defn simple-example [{:keys [width height] :as ctx}]
   [:div
    [greeting "Hello world2, it is now"]
-   [clock]
-   [color-input]
+   [url-input]
    [test-component]
    [canvas ctx]])
 
